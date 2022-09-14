@@ -1,0 +1,103 @@
+#!/bin/bash
+
+NOTES_PATH="$HOME/.notes/"
+
+function usage () {
+    local name=$(basename $0)
+    cat <<EOUSAGE
+
+$name is a command line tool for taking notes
+
+Usage:
+    $name <name of note>    Creates a new note
+    $name -c                Choose a note
+    $name -f                grep notes
+    $name -h                show help message
+
+Your notes directory is $NOTES_PATH. You can override this by changing the NOTES_PATH variable in the program script.
+
+EOUSAGE
+}
+
+choose_note () {
+    declare -A filenames
+    
+    termwidth=$(stty size | awk '{print $2}')
+    foldwidth=$(($termwidth - 16))
+
+    files=$(ls "$NOTES_PATH")
+
+    for f in $files; do
+        file=$(echo $f | cut -d "." -f 1 | sed 's/_/ /g' | cut -d " " -f 2- )
+        filenames[$f]="$file"
+    done    
+
+    selection=$( printf '%s\n' "${filenames[@]}" | gum choose )
+    for f in ${!filenames[@]}; do
+        if [[ "${filenames[$f]}" == "$selection" ]]; then
+            select="$f"
+            fold -w $foldwidth -s "$NOTES_PATH""$select" | bat -l md
+            exit 1
+        fi
+    done
+}
+
+function find_note () {
+  local file
+
+  file="$(find $HOME/.notes -iname '*.md' -exec basename -s .md {} \; | sort -r | fzf --bind 'J:preview-down,K:preview-up' --height 100% --preview 'if file -i {}|grep -q binary; then file -b {}; else glow -s dark $HOME/.notes/{}.md; fi')"
+
+  if [[ -n $file ]]; then
+     $EDITOR $HOME/.notes/"$file".md
+  fi
+}
+
+while getopts :hcfn opt
+do
+    case $opt in
+        c)
+            choose_note
+            exit 2
+            ;;
+        f)
+            find_note
+            exit 2
+            ;;
+        n)
+            echo "You want to create a new note."
+            exit 2
+            ;;
+        h)
+            usage
+            exit 1
+            ;;
+        *)
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            exit 2
+            ;;
+    esac
+done
+
+# pass remaining arguments into the script after options have been parsed.
+shift $((OPTIND - 1))
+FILE="$@"
+echo "\$@ post shift is \"$FILE"\"
+echo "\$\# is \"$#\""
+
+function new_note () {
+    date=$(date +"%Y%m%dT%H%M%S")
+    file=${FILE// /_}
+    file=$(echo _$file)
+    filename=$(echo "$date""$file")
+    echo "#${file//_/ }" >> $HOME/.notes/$filename.md
+    $EDITOR $HOME/.notes/$filename.md
+}    
+
+
+
+if [ $# -eq 0 ]; then
+    usage
+else
+    new_note
+fi
