@@ -82,8 +82,6 @@ done
 # pass remaining arguments into the script after options have been parsed.
 shift $((OPTIND - 1))
 FILE="$@"
-echo "\$@ post shift is \"$FILE"\"
-echo "\$\# is \"$#\""
 
 function new_note () {
     date=$(date +"%Y%m%dT%H%M%S")
