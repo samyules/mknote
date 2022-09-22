@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
+# vim: ft=bash
 
 NOTES_PATH="$HOME/.notes/"
+
+if [ ! -d $NOTES_PATH ] ; then
+  printf "Welcome to mknote!\n"
+  printf "You don't have a folder to keep your notes in.\nWould you like to create a folder in $NOTES_PATH?"
+  gum confirm "Create folder?" && mkdir -p $NOTES_PATH || echo "The notes folder is required. Please come back again."
+fi
+
+if [ -z $EDITOR ] ; then
+  mknote_editor=nvim
+else
+  mknote_editor=$EDITOR
+fi
 
 function usage () {
     local name=$(basename $0)
@@ -48,7 +61,7 @@ function find_note () {
   file="$(find $HOME/.notes -iname '*.md' -exec basename -s .md {} \; | sort -r | fzf --bind 'J:preview-down,K:preview-up' --height 100% --preview 'if file -i {}|grep -q binary; then file -b {}; else glow -s dark $HOME/.notes/{}.md; fi')"
 
   if [[ -n $file ]]; then
-     $EDITOR $HOME/.notes/"$file".md
+     $mknote_editor $HOME/.notes/"$file".md
   fi
 }
 
@@ -89,7 +102,7 @@ function new_note () {
     file=$(echo _$file)
     filename=$(echo "$date""$file")
     echo "#${file//_/ }" >> $HOME/.notes/$filename.md
-    $EDITOR $HOME/.notes/$filename.md
+    $mknote_editor $HOME/.notes/$filename.md
 }    
 
 
@@ -99,3 +112,4 @@ if [ $# -eq 0 ]; then
 else
     new_note
 fi
+
